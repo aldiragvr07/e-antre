@@ -54,7 +54,7 @@ export default function UpcomingEvents() {
           <p className="mt-1 text-sm text-zinc-500">Discover the hottest events in your city</p>
         </div>
         <Link
-          href="#"
+          href="/events"
           className="flex items-center gap-1 text-sm font-semibold text-accent transition-colors hover:text-accent-hover"
         >
           View All

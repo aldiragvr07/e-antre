@@ -24,16 +24,16 @@ export default function Navbar() {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-8">
-            <Link href="#" className="text-sm font-medium text-zinc-400 transition-colors hover:text-white">
+            <Link href="/events" className="text-sm font-medium text-zinc-400 transition-colors hover:text-white">
               Events
             </Link>
-            <Link href="#" className="text-sm font-medium text-zinc-400 transition-colors hover:text-white">
+            <Link href="/venues" className="text-sm font-medium text-zinc-400 transition-colors hover:text-white">
               Venues
             </Link>
-            <Link href="#" className="text-sm font-medium text-zinc-400 transition-colors hover:text-white">
+            <Link href="/about" className="text-sm font-medium text-zinc-400 transition-colors hover:text-white">
               About
             </Link>
-            <Link href="#" className="text-sm font-medium text-zinc-400 transition-colors hover:text-white">
+            <Link href="/support" className="text-sm font-medium text-zinc-400 transition-colors hover:text-white">
               Support
             </Link>
           </div>
@@ -41,13 +41,13 @@ export default function Navbar() {
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center gap-3">
             <Link
-              href="#"
+              href="/login"
               className="text-sm font-medium text-zinc-300 transition-colors hover:text-white"
             >
               Log In
             </Link>
             <Link
-              href="#"
+              href="/register"
               className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-accent-hover hover:shadow-lg hover:shadow-accent/25"
             >
               Sign Up

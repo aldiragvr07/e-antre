@@ -20,7 +20,7 @@ export default function Footer() {
                 </svg>
               </div>
               <span className="text-lg font-bold text-white">
-                Event<span className="text-accent">Ticketing</span>
+                E-<span className="text-accent">ANTRE</span>
               </span>
             </Link>
             <p className="mt-4 text-sm leading-relaxed text-zinc-500">
