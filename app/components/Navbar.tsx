@@ -18,7 +18,7 @@ export default function Navbar() {
               </svg>
             </div>
             <span className="text-lg font-bold text-white">
-              Event<span className="text-accent">Ticketing</span>
+              E-<span className="text-accent">ANTRE</span>
             </span>
           </Link>
 
@@ -90,10 +90,10 @@ export default function Navbar() {
               Support
             </Link>
             <div className="flex gap-3 pt-3">
-              <Link href="#" className="flex-1 rounded-full border border-white/10 px-4 py-2 text-center text-sm font-medium text-white">
+              <Link href="/login" className="flex-1 rounded-full border border-white/10 px-4 py-2 text-center text-sm font-medium text-white">
                 Log In
               </Link>
-              <Link href="#" className="flex-1 rounded-full bg-accent px-4 py-2 text-center text-sm font-semibold text-white">
+              <Link href="/register" className="flex-1 rounded-full bg-accent px-4 py-2 text-center text-sm font-semibold text-white">
                 Sign Up
               </Link>
             </div>
