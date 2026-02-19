@@ -59,6 +59,15 @@ export default function EventDetailPage() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
 
+  // === BARU: Voucher ===
+  const [voucherCode, setVoucherCode] = useState("");
+  const [voucherDiscount, setVoucherDiscount] = useState(0);
+  // ↑ Persentase diskon voucher (0 = tidak pakai)
+  const [voucherMsg, setVoucherMsg] = useState("");
+  const [voucherValid, setVoucherValid] = useState(false);
+  const [applyingVoucher, setApplyingVoucher] = useState(false);
+  const [appliedVoucherId, setAppliedVoucherId] = useState<string | null>(null);
+
   // === AMBIL DATA EVENT ===
   useEffect(() => {
     async function fetchEventDetail() {
@@ -119,7 +128,57 @@ export default function EventDetailPage() {
     }).format(price);
   }
 
-  // === BARU: FUNGSI CHECKOUT ===
+  // === BARU: FUNGSI APPLY VOUCHER ===
+  async function handleApplyVoucher() {
+    if (!voucherCode.trim()) return;
+    setApplyingVoucher(true);
+    setVoucherMsg("");
+    setVoucherDiscount(0);
+    setVoucherValid(false);
+    setAppliedVoucherId(null);
+
+    const { data, error } = await supabase
+      .from("vouchers")
+      .select("*")
+      .eq("code", voucherCode.toUpperCase().trim())
+      .eq("is_active", true)
+      .single();
+
+    setApplyingVoucher(false);
+
+    if (error || !data) {
+      setVoucherMsg("Kode voucher tidak ditemukan atau tidak aktif");
+      return;
+    }
+
+    // Cek apakah sudah habis penggunaannya
+    if (data.used_count >= data.max_usage) {
+      setVoucherMsg("Voucher sudah habis digunakan");
+      return;
+    }
+
+    // Cek apakah sudah expired
+    if (data.valid_until && new Date(data.valid_until) < new Date()) {
+      setVoucherMsg("Voucher sudah expired");
+      return;
+    }
+
+    // Voucher valid!
+    setVoucherDiscount(data.discount_percent);
+    setVoucherValid(true);
+    setAppliedVoucherId(data.id);
+    setVoucherMsg(`Diskon ${data.discount_percent}% berhasil diterapkan!`);
+  }
+
+  function removeVoucher() {
+    setVoucherCode("");
+    setVoucherDiscount(0);
+    setVoucherValid(false);
+    setVoucherMsg("");
+    setAppliedVoucherId(null);
+  }
+
+  // === FUNGSI CHECKOUT ===
   async function handleCheckout() {
     if (!selectedTier || !event) return;
 
@@ -129,7 +188,6 @@ export default function EventDetailPage() {
     // 1. Cek apakah user sudah login
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      // Belum login → redirect ke login, setelah login akan kembali ke sini
       router.push("/login");
       return;
     }
@@ -142,9 +200,12 @@ export default function EventDetailPage() {
       return;
     }
 
-    // 3. Simpan order ke database
-    const totalPrice = selectedTier.price * quantity;
+    // 3. Hitung harga dengan diskon voucher
+    const subtotal = selectedTier.price * quantity;
+    const discountAmount = voucherValid ? Math.round(subtotal * voucherDiscount / 100) : 0;
+    const totalPrice = subtotal - discountAmount;
 
+    // 4. Simpan order ke database
     const { error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -153,8 +214,9 @@ export default function EventDetailPage() {
         ticket_tier_id: selectedTier.id,
         quantity: quantity,
         total_price: totalPrice,
+        discount_amount: discountAmount,
+        voucher_id: appliedVoucherId,
         status: "paid",
-        // ↑ Simulasi: langsung "paid". Nanti bisa diubah ke "pending" + payment gateway
       });
 
     if (orderError) {
@@ -163,20 +225,25 @@ export default function EventDetailPage() {
       return;
     }
 
-    // 4. Update jumlah tiket terjual
-    const { error: updateError } = await supabase
-      .from("ticket_tiers")
+    // 5. Update jumlah tiket terjual
+    await supabase.from("ticket_tiers")
       .update({ sold: selectedTier.sold + quantity })
       .eq("id", selectedTier.id);
 
-    if (updateError) {
-      console.error("Gagal update sold count:", updateError);
+    // 6. Update jumlah voucher terpakai
+    if (appliedVoucherId) {
+      await supabase.rpc("increment_voucher_used", { voucher_id: appliedVoucherId });
+      // Kalau RPC belum ada, fallback manual:
+      const { data: vData } = await supabase.from("vouchers").select("used_count").eq("id", appliedVoucherId).single();
+      if (vData) {
+        await supabase.from("vouchers").update({ used_count: vData.used_count + 1 }).eq("id", appliedVoucherId);
+      }
     }
 
     setCheckoutLoading(false);
 
-    // 5. Redirect ke halaman sukses
-    router.push(`/checkout/success?event=${event.title}&tier=${selectedTier.name}&qty=${quantity}&total=${totalPrice}`);
+    // 7. Redirect ke halaman sukses
+    router.push(`/checkout/success?event=${event.title}&tier=${selectedTier.name}&qty=${quantity}&total=${totalPrice}&discount=${discountAmount}`);
   }
 
   // === LOADING STATE ===
@@ -407,15 +474,56 @@ export default function EventDetailPage() {
                         </div>
                       </div>
 
+                      {/* BARU: Input Kode Voucher */}
+                      <div>
+                        <label className="block text-sm text-gray-300 mb-2">Kode Voucher (opsional)</label>
+                        {voucherValid ? (
+                          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
+                               style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)" }}>
+                            <span className="font-mono font-bold text-green-400 text-sm flex-1">{voucherCode.toUpperCase()}</span>
+                            <span className="text-green-400 text-xs">-{voucherDiscount}%</span>
+                            <button onClick={removeVoucher} className="text-gray-400 hover:text-red-400 cursor-pointer text-xs">✕</button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <input type="text" value={voucherCode}
+                                   onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                                   placeholder="misal: DISKON20"
+                                   className="flex-1 px-3 py-2.5 rounded-xl text-white text-sm uppercase placeholder-gray-500 outline-none"
+                                   style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)" }} />
+                            <button onClick={handleApplyVoucher} disabled={applyingVoucher || !voucherCode.trim()}
+                                    className="px-4 py-2.5 rounded-xl text-sm font-medium text-blue-400 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{ background: "rgba(59,91,255,0.15)", border: "1px solid rgba(59,91,255,0.3)" }}>
+                              {applyingVoucher ? "..." : "Apply"}
+                            </button>
+                          </div>
+                        )}
+                        {voucherMsg && (
+                          <p className={`text-xs mt-1.5 ${voucherValid ? "text-green-400" : "text-red-400"}`}>
+                            {voucherMsg}
+                          </p>
+                        )}
+                      </div>
+
                       {/* Ringkasan Harga */}
                       <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.05)" }}>
                         <div className="flex justify-between text-sm text-gray-400 mb-1">
                           <span>{selectedTier.name} × {quantity}</span>
                           <span>{formatPrice(selectedTier.price * quantity)}</span>
                         </div>
+                        {voucherValid && (
+                          <div className="flex justify-between text-sm text-green-400 mb-1">
+                            <span>Diskon ({voucherDiscount}%)</span>
+                            <span>-{formatPrice(Math.round(selectedTier.price * quantity * voucherDiscount / 100))}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between text-white font-bold pt-2 border-t border-white/10">
                           <span>Total</span>
-                          <span>{formatPrice(selectedTier.price * quantity)}</span>
+                          <span>{formatPrice(
+                            voucherValid
+                              ? selectedTier.price * quantity - Math.round(selectedTier.price * quantity * voucherDiscount / 100)
+                              : selectedTier.price * quantity
+                          )}</span>
                         </div>
                       </div>
 

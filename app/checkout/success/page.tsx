@@ -13,6 +13,7 @@ export default function CheckoutSuccessPage() {
   const tierName = searchParams.get("tier") || "Tiket";
   const qty = searchParams.get("qty") || "1";
   const total = searchParams.get("total") || "0";
+  const discount = searchParams.get("discount") || "0";
 
   // Format harga
   function formatPrice(price: number) {
@@ -60,6 +61,12 @@ export default function CheckoutSuccessPage() {
               <span className="text-gray-400 text-sm">Jumlah</span>
               <span className="text-white font-medium text-sm">{qty} tiket</span>
             </div>
+            {Number(discount) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-green-400 text-sm">Diskon Voucher</span>
+                <span className="text-green-400 font-medium text-sm">-{formatPrice(Number(discount))}</span>
+              </div>
+            )}
             <div className="pt-3 border-t border-white/10 flex justify-between">
               <span className="text-white font-semibold">Total Bayar</span>
               <span className="text-blue-400 font-bold text-lg">{formatPrice(Number(total))}</span>
