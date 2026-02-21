@@ -212,8 +212,8 @@ export default function EventDetailPage() {
     const discountAmount = voucherValid ? Math.round(subtotal * voucherDiscount / 100) : 0;
     const totalPrice = subtotal - discountAmount;
 
-    // 4. Simpan order ke database
-    const { error: orderError } = await supabase
+    // 4. Simpan order ke database (status: pending, menunggu pembayaran)
+    const { data: orderData, error: orderError } = await supabase
       .from("orders")
       .insert({
         user_id: user.id,
@@ -223,34 +223,42 @@ export default function EventDetailPage() {
         total_price: totalPrice,
         discount_amount: discountAmount,
         voucher_id: appliedVoucherId,
-        status: "paid",
-      });
+        status: "pending",
+      })
+      .select("id")
+      .single();
 
-    if (orderError) {
-      setCheckoutError("Gagal membuat order: " + orderError.message);
+    if (orderError || !orderData) {
+      setCheckoutError("Gagal membuat order: " + (orderError?.message || "Unknown error"));
       setCheckoutLoading(false);
       return;
     }
 
-    // 5. Update jumlah tiket terjual
-    await supabase.from("ticket_tiers")
-      .update({ sold: selectedTier.sold + quantity })
-      .eq("id", selectedTier.id);
+    // 5. Redirect ke Pakasir payment page
+    try {
+      const res = await fetch("/api/payment/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: orderData.id,
+          amount: totalPrice,
+          eventTitle: event.title,
+        }),
+      });
 
-    // 6. Update jumlah voucher terpakai
-    if (appliedVoucherId) {
-      await supabase.rpc("increment_voucher_used", { voucher_id: appliedVoucherId });
-      // Kalau RPC belum ada, fallback manual:
-      const { data: vData } = await supabase.from("vouchers").select("used_count").eq("id", appliedVoucherId).single();
-      if (vData) {
-        await supabase.from("vouchers").update({ used_count: vData.used_count + 1 }).eq("id", appliedVoucherId);
+      const result = await res.json();
+
+      if (result.paymentUrl) {
+        // Redirect ke halaman pembayaran Pakasir
+        window.location.href = result.paymentUrl;
+      } else {
+        setCheckoutError("Gagal membuat link pembayaran");
+        setCheckoutLoading(false);
       }
+    } catch {
+      setCheckoutError("Gagal menghubungi payment gateway");
+      setCheckoutLoading(false);
     }
-
-    setCheckoutLoading(false);
-
-    // 7. Redirect ke halaman sukses
-    router.push(`/checkout/success?event=${event.title}&tier=${selectedTier.name}&qty=${quantity}&total=${totalPrice}&discount=${discountAmount}`);
   }
 
   // === LOADING STATE ===
