@@ -192,6 +192,13 @@ export default function EventDetailPage() {
       return;
     }
 
+    // 1b. Pastikan user ada di tabel public.users (sync dari auth.users)
+    await supabase.from("users").upsert({
+      id: user.id,
+      full_name: user.user_metadata?.full_name || "",
+      email: user.email || "",
+    }, { onConflict: "id" });
+
     // 2. Cek ketersediaan tiket
     const available = selectedTier.quota - selectedTier.sold;
     if (quantity > available) {

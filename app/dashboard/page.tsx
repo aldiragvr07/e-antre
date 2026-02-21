@@ -113,11 +113,25 @@ export default function DashboardPage() {
 
   // === FORMAT TANGGAL ===
   function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleDateString("id-ID", {
+    const utcDate = dateString.endsWith("Z") ? dateString : dateString + "Z";
+    return new Date(utcDate).toLocaleDateString("id-ID", {
       weekday: "short",
       year: "numeric",
       month: "short",
       day: "numeric",
+      timeZone: "Asia/Jakarta",
+    });
+  }
+
+  function formatDateTime(dateString: string) {
+    const utcDate = dateString.endsWith("Z") ? dateString : dateString + "Z";
+    return new Date(utcDate).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Jakarta",
     });
   }
 
@@ -246,6 +260,9 @@ export default function DashboardPage() {
                           <div className="mt-2 text-sm text-gray-400">
                             <span>🎫 {order.ticket_tiers?.name} × {order.quantity}</span>
                           </div>
+                          <div className="mt-1 text-xs text-gray-500">
+                            <span>🕐 Dibeli: {formatDateTime(order.created_at)}</span>
+                          </div>
                         </div>
 
                         {/* Harga & Status */}
@@ -255,6 +272,13 @@ export default function DashboardPage() {
                                 style={{ background: statusColor.bg, border: `1px solid ${statusColor.border}` }}>
                             {order.status}
                           </span>
+                          {order.status === "paid" && (
+                            <Link href={`/ticket?id=${order.id}`}
+                                  className="block mt-3 px-4 py-2 rounded-lg text-xs font-medium text-blue-400 hover:text-white transition-colors"
+                                  style={{ background: "rgba(59,91,255,0.15)", border: "1px solid rgba(59,91,255,0.3)" }}>
+                              🎫 Lihat E-Ticket
+                            </Link>
+                          )}
                         </div>
                       </div>
                     </div>

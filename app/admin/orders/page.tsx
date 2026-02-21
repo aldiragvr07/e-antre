@@ -67,8 +67,12 @@ export default function AdminOrdersPage() {
   }
 
   function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleDateString("id-ID", {
+    // Supabase menyimpan timestamp tanpa timezone info (UTC)
+    // Tambahkan "Z" agar JS tahu ini UTC, lalu konversi ke WIB
+    const utcDate = dateString.endsWith("Z") ? dateString : dateString + "Z";
+    return new Date(utcDate).toLocaleDateString("id-ID", {
       day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+      timeZone: "Asia/Jakarta",
     });
   }
 
