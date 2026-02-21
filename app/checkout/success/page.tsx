@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabase";
@@ -15,7 +15,20 @@ type OrderData = {
   ticket_tiers: { name: string } | null;
 };
 
-export default function CheckoutSuccessPage() {
+// Wrapper component dengan Suspense
+export default function CheckoutSuccessWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0a0a14" }}>
+        <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    }>
+      <CheckoutSuccessPage />
+    </Suspense>
+  );
+}
+
+function CheckoutSuccessPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
 

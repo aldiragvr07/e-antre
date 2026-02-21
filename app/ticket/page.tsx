@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { supabase } from "../lib/supabase";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -27,7 +27,19 @@ type OrderData = {
   };
 };
 
-export default function ETicketPage() {
+export default function ETicketWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0a0a14" }}>
+        <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    }>
+      <ETicketPage />
+    </Suspense>
+  );
+}
+
+function ETicketPage() {
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [qrUrl, setQrUrl] = useState("");
